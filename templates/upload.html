@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header">
+    <h1>Upload Content</h1>
+    <p>Upload your content for AI-powered analysis</p>
+</div>
+
+<div class="container">
+    <div class="card">
+        <div id="uploadSection">
+            <h2>Choose Upload Method</h2>
+            <div class="upload-tabs">
+                <button class="tab-btn active" data-tab="file">File Upload</button>
+                <button class="tab-btn" data-tab="url">URL Upload</button>
+            </div>
+
+            <div class="tab-content" id="fileUpload">
+                <form id="fileUploadForm" class="form">
+                    <div class="form-group">
+                        <div class="upload-zone" id="dropZone">
+                            <img src="{{ url_for('static', filename='img/upload.svg') }}" alt="Upload" class="upload-icon">
+                            <p>Drag and drop your video here or</p>
+                            <label for="videoFile" class="btn btn-primary">Choose File</label>
+                            <input type="file" id="videoFile" name="video" accept=".mp4,.mov,.avi" hidden>
+                        </div>
+                        <div class="file-info" id="fileInfo"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>
+                        <span class="btn-text">Upload Video</span>
+                        <div class="spinner" hidden></div>
+                    </button>
+                </form>
+            </div>
+
+            <div class="tab-content hidden" id="urlUpload">
+                <form id="urlUploadForm" class="form">
+                    <div class="form-group">
+                        <label for="videoUrl">Video URL</label>
+                        <input type="url" id="videoUrl" name="video_url" class="input" 
+                               placeholder="https://example.com/video.mp4" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">Process URL</span>
+                        <div class="spinner" hidden></div>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="analysisSection" class="hidden">
+            <h2>Select Analysis Categories</h2>
+            <div class="categories-grid">
+                {% for class in classes %}
+                <div class="category-item">
+                    <input type="checkbox" 
+                           id="class-{{ loop.index }}" 
+                           name="categories" 
+                           value="{{ class.name }}"
+                           data-prompts='{{ class.prompts|tojson }}'>
+                    <label for="class-{{ loop.index }}">
+                        {{ class.name }}
+                        <div class="category-description">{{ class.description }}</div>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            <button id="analyzeBtn" class="btn btn-secondary" disabled>
+                Start Analysis
+            </button>
+        </div>
+    </div>
+
+    <div id="resultsCard" class="card hidden">
+        <h2>Analysis Results</h2>
+        <div id="resultsContent"></div>
+    </div>
+</div>
+
+<!-- Progress Modal -->
+<div id="progressModal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Processing Video</h3>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        <p id="progressText">Uploading... 0%</p>
+    </div>
+</div>
+{% endblock %}

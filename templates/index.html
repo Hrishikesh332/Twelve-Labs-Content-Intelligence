@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Intelligence Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="header-top">
+                <div class="logo">Content Intelligence</div>
+                <div class="nav-links">
+                    <a href="#" class="nav-link">Home</a>
+                    <a href="#" class="nav-link">Categories</a>
+                    <a href="#" class="nav-link">About</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+    <h2>Select Category for Analysis</h2>
+    <form id="analyzeForm" class="form">
+        <div class="categories-grid">
+            {% for class in classes %}
+            <label class="category-option">
+                <input type="radio" 
+                       name="category" 
+                       value="{{ class.name }}"
+                       class="category-radio"
+                       data-prompts="{{ class.prompts|tojson|safe }}">
+                <div class="category-btn">
+                    <span class="category-icon">{{ category_emojis[class.name] }}</span>
+                    <span class="category-label">{{ class.name }}</span>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+        
+        <button type="submit" class="btn btn-primary" id="analyzeBtn">
+            <span class="btn-text">Analyze Content</span>
+            <div class="spinner" hidden></div>
+        </button>
+    </form>
+    </div>
+
+        <div id="resultsCard" class="card hidden">
+            <div class="results-header">Analysis Results</div>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+    const categoryEmojis = {{ category_emojis|tojson|safe }};
+
+    document.getElementById('analyzeForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const selectedRadio = document.querySelector('input[name="category"]:checked');
+        
+        if (!selectedRadio) {
+            showMessage('Please select a category', 'error');
+            return;
+        }
+        
+        const selectedClass = {
+            name: selectedRadio.value,
+            prompts: JSON.parse(selectedRadio.dataset.prompts)
+        };
+        
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const btnText = analyzeBtn.querySelector('.btn-text');
+        const spinner = analyzeBtn.querySelector('.spinner');
+        
+        try {
+            analyzeBtn.disabled = true;
+            btnText.hidden = true;
+            spinner.hidden = false;
+            
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    classes: [selectedClass]
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showMessage('Analysis completed successfully!', 'success');
+                displayResults(result.results);
+            } else {
+                throw new Error(result.error || 'Analysis failed');
+            }
+        } catch (error) {
+            showMessage(error.message, 'error');
+        } finally {
+            analyzeBtn.disabled = false;
+            btnText.hidden = false;
+            spinner.hidden = true;
+        }
+    });
+
+    function displayResults(results) {
+        const resultsCard = document.getElementById('resultsCard');
+        const resultsContent = document.getElementById('resultsContent');
+        resultsCard.classList.remove('hidden');
+        resultsContent.innerHTML = '';
+        
+        results.forEach((result, index) => {
+            const resultElement = document.createElement('div');
+            resultElement.className = 'result-item';
+            
+            result.classes.forEach(classResult => {
+                const percentage = (classResult.score * 100).toFixed(1);
+                const confidence = getConfidenceLevel(classResult.score);
+                const emoji = categoryEmojis[classResult.name] || '📊';
+                
+                resultElement.innerHTML += `
+                    <div class="result-category ${confidence.class}">
+                        <div class="result-header">
+                            <div class="category-info">
+                                <span class="category-icon">${emoji}</span>
+                                <span class="category-name">${classResult.name}</span>
+                                <span class="confidence-badge ${confidence.class}">
+                                    ${confidence.label}
+                                </span>
+                            </div>
+                            <span class="category-score">${percentage}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: ${percentage}%">
+                                <div class="progress-glow"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsContent.appendChild(resultElement);
+        });
+        
+        resultsCard.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function getConfidenceLevel(score) {
+        if (score >= 0.8) {
+            return { label: 'High Confidence', class: 'high-confidence' };
+        } else if (score >= 0.5) {
+            return { label: 'Medium Confidence', class: 'medium-confidence' };
+        } else {
+            return { label: 'Low Confidence', class: 'low-confidence' };
+        }
+    }
+
+    // Add loading animation
+    const spinner = document.createElement('style');
+    spinner.textContent = `
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease forwards;
+            z-index: 1000;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .alert.fade-out {
+            animation: slideOut 0.3s ease forwards;
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .alert-icon {
+            font-size: 1.2em;
+        }
+    `;
+    document.head.appendChild(spinner);
+    </script>
+</body>
+</html>
