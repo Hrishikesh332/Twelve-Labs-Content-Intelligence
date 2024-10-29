@@ -1,217 +1,446 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Intelligence Platform</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-</head>
-<body>
-    <div class="header">
-        <div class="header-content">
-            <div class="header-top">
-                <div class="logo">Content Intelligence</div>
-                <div class="nav-links">
-                    <a href="#" class="nav-link">Home</a>
-                    <a href="#" class="nav-link">Categories</a>
-                    <a href="#" class="nav-link">About</a>
-                </div>
+{% extends "base.html" %}
+{% block content %}
+<div class="header">
+    <div class="header-content">
+        <div class="header-top">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="logo-img">
+                <span class="logo-text">Content Intelligence</span>
             </div>
+            <nav class="nav-links">
+                <a href="/" class="nav-link active">Home</a>
+                <a href="#categories" class="nav-link">Categories</a>
+                <a href="#about" class="nav-link">About</a>
+            </nav>
+        </div>
+        <div class="header-banner">
+            <h1>Content Moderation Platform</h1>
+            <p>Analyze and detect inappropriate content with advanced AI</p>
         </div>
     </div>
+</div>
 
+<main class="container">
     <div class="card">
-    <h2>Select Category for Analysis</h2>
-    <form id="analyzeForm" class="form">
-        <div class="categories-grid">
-            {% for class in classes %}
-            <label class="category-option">
-                <input type="radio" 
-                       name="category" 
-                       value="{{ class.name }}"
-                       class="category-radio"
-                       data-prompts="{{ class.prompts|tojson|safe }}">
-                <div class="category-btn">
-                    <span class="category-icon">{{ category_emojis[class.name] }}</span>
-                    <span class="category-label">{{ class.name }}</span>
-                </div>
-            </label>
-            {% endfor %}
-        </div>
-        
-        <button type="submit" class="btn btn-primary" id="analyzeBtn">
-            <span class="btn-text">Analyze Content</span>
-            <div class="spinner" hidden></div>
-        </button>
-    </form>
-    </div>
-
-        <div id="resultsCard" class="card hidden">
-            <div class="results-header">Analysis Results</div>
-            <div id="resultsContent"></div>
-        </div>
-    </div>
-
-    <script>
-    const categoryEmojis = {{ category_emojis|tojson|safe }};
-
-    document.getElementById('analyzeForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const selectedRadio = document.querySelector('input[name="category"]:checked');
-        
-        if (!selectedRadio) {
-            showMessage('Please select a category', 'error');
-            return;
-        }
-        
-        const selectedClass = {
-            name: selectedRadio.value,
-            prompts: JSON.parse(selectedRadio.dataset.prompts)
-        };
-        
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const btnText = analyzeBtn.querySelector('.btn-text');
-        const spinner = analyzeBtn.querySelector('.spinner');
-        
-        try {
-            analyzeBtn.disabled = true;
-            btnText.hidden = true;
-            spinner.hidden = false;
-            
-            const response = await fetch('/analyze', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    classes: [selectedClass]
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showMessage('Analysis completed successfully!', 'success');
-                displayResults(result.results);
-            } else {
-                throw new Error(result.error || 'Analysis failed');
-            }
-        } catch (error) {
-            showMessage(error.message, 'error');
-        } finally {
-            analyzeBtn.disabled = false;
-            btnText.hidden = false;
-            spinner.hidden = true;
-        }
-    });
-
-    function displayResults(results) {
-        const resultsCard = document.getElementById('resultsCard');
-        const resultsContent = document.getElementById('resultsContent');
-        resultsCard.classList.remove('hidden');
-        resultsContent.innerHTML = '';
-        
-        results.forEach((result, index) => {
-            const resultElement = document.createElement('div');
-            resultElement.className = 'result-item';
-            
-            result.classes.forEach(classResult => {
-                const percentage = (classResult.score * 100).toFixed(1);
-                const confidence = getConfidenceLevel(classResult.score);
-                const emoji = categoryEmojis[classResult.name] || '📊';
-                
-                resultElement.innerHTML += `
-                    <div class="result-category ${confidence.class}">
-                        <div class="result-header">
-                            <div class="category-info">
-                                <span class="category-icon">${emoji}</span>
-                                <span class="category-name">${classResult.name}</span>
-                                <span class="confidence-badge ${confidence.class}">
-                                    ${confidence.label}
-                                </span>
-                            </div>
-                            <span class="category-score">${percentage}%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress" style="width: ${percentage}%">
-                                <div class="progress-glow"></div>
-                            </div>
-                        </div>
+        <h2>Select Category for Analysis</h2>
+        <form id="analyzeForm" class="form">
+            <div class="categories-grid">
+                {% for class in classes %}
+                <label class="category-option">
+                    <input type="radio" 
+                           name="category" 
+                           value="{{ class.name }}"
+                           class="category-radio"
+                           data-prompts="{{ class.prompts|tojson|safe }}">
+                    <div class="category-btn">
+                        <span class="category-icon">{{ category_emojis[class.name] }}</span>
+                        <span class="category-label">{{ class.name }}</span>
                     </div>
-                `;
-            });
+                </label>
+                {% endfor %}
+            </div>
             
-            resultsContent.appendChild(resultElement);
+            <button type="submit" class="analyze-btn btn btn-primary" id="analyzeBtn" disabled>
+                <span class="btn-text">Analyze Content</span>
+            </button>
+        </form>
+    </div>
+
+    <div id="resultsCard" class="card hidden">
+        <div class="results-header">Analysis Results</div>
+        <div id="resultsContent"></div>
+    </div>
+</main>
+
+
+<script>
+const categoryEmojis = {{ category_emojis|tojson|safe }};
+const analyzeBtn = document.getElementById('analyzeBtn');
+const analyzeForm = document.getElementById('analyzeForm');
+let isAnalyzing = false;
+
+document.querySelectorAll('.category-radio').forEach(radio => {
+    radio.addEventListener('change', () => {
+        const categoryBtn = radio.closest('.category-option').querySelector('.category-btn');
+        
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.classList.remove('selected');
         });
         
-        resultsCard.scrollIntoView({ behavior: 'smooth' });
+        if (radio.checked) {
+            categoryBtn.classList.add('selected');
+            analyzeBtn.disabled = false;
+        }
+    });
+});
+
+function showMessage(message, type) {
+    const existingAlert = document.querySelector('.alert');
+    if (existingAlert) {
+        existingAlert.remove();
     }
 
-    function getConfidenceLevel(score) {
-        if (score >= 0.8) {
-            return { label: 'High Confidence', class: 'high-confidence' };
-        } else if (score >= 0.5) {
-            return { label: 'Medium Confidence', class: 'medium-confidence' };
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    
+    const icon = document.createElement('span');
+    icon.className = 'alert-icon';
+    icon.textContent = type === 'error' ? '❌' : '✅';
+    
+    const messageText = document.createElement('span');
+    messageText.textContent = message;
+    
+    alertDiv.appendChild(icon);
+    alertDiv.appendChild(messageText);
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.classList.add('fade-out');
+        setTimeout(() => alertDiv.remove(), 300);
+    }, 4700);
+}
+
+function showProgress() {
+    const modal = document.getElementById('progressModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function hideProgress() {
+    const modal = document.getElementById('progressModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function updateProgress(percent) {
+    const fill = document.querySelector('.progress-fill');
+    const text = document.querySelector('.progress-text');
+    if (fill && text) {
+        fill.style.width = `${percent}%`;
+        text.textContent = `Processing... ${percent}%`;
+    }
+}
+
+analyzeForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (isAnalyzing) return;
+    
+    const selectedRadio = document.querySelector('input[name="category"]:checked');
+    
+    if (!selectedRadio) {
+        showMessage('Please select a category', 'error');
+        return;
+    }
+    
+    const selectedClass = {
+        name: selectedRadio.value,
+        prompts: JSON.parse(selectedRadio.dataset.prompts)
+    };
+    
+    const btnText = analyzeBtn.querySelector('.btn-text');
+    const spinner = analyzeBtn.querySelector('.spinner');
+    
+    try {
+        isAnalyzing = true;
+        analyzeBtn.disabled = true;
+        btnText.hidden = true;
+        spinner.hidden = false;
+        showProgress();
+        
+        const response = await fetch('/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                classes: [selectedClass]
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Not Detected`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showMessage('Analysis completed successfully!', 'success');
+            displayResults(result.results);
         } else {
-            return { label: 'Low Confidence', class: 'low-confidence' };
+            throw new Error(result.error || 'Analysis failed');
         }
+    } catch (error) {
+        showMessage(error.message, 'error');
+    } finally {
+        isAnalyzing = false;
+        analyzeBtn.disabled = false;
+        btnText.hidden = false;
+        spinner.hidden = true;
+        hideProgress();
     }
+});
 
-    // Add loading animation
-    const spinner = document.createElement('style');
-    spinner.textContent = `
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
-        }
+function displayResults(results) {
+    const resultsCard = document.getElementById('resultsCard');
+    const resultsContent = document.getElementById('resultsContent');
+    resultsCard.classList.remove('hidden');
+    resultsContent.innerHTML = '';
+    
+    results.forEach((result, index) => {
+        const resultElement = document.createElement('div');
+        resultElement.className = 'result-item';
         
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        result.classes.forEach(classResult => {
+            const percentage = (classResult.score).toFixed(1);
+            const confidence = getConfidenceLevel(classResult.score);
+            const emoji = categoryEmojis[classResult.name] || '📊';
+            
+            resultElement.innerHTML += `
+                <div class="result-category ${confidence.class}">
+                    <div class="result-header">
+                        <div class="category-info">
+                            <span class="category-icon">${emoji}</span>
+                            <span class="category-name">${classResult.name}</span>
+                            <span class="confidence-badge ${confidence.class}">
+                                ${confidence.label}
+                            </span>
+                        </div>
+                        <span class="category-score">${percentage}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: ${percentage}%">
+                            <div class="progress-glow"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
         
-        .alert {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            animation: slideIn 0.3s ease forwards;
-            z-index: 1000;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .alert.fade-out {
-            animation: slideOut 0.3s ease forwards;
-        }
-        
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-        
-        .alert-icon {
-            font-size: 1.2em;
-        }
-    `;
-    document.head.appendChild(spinner);
-    </script>
-</body>
-</html>
+        resultsContent.appendChild(resultElement);
+    });
+    
+    resultsCard.scrollIntoView({ behavior: 'smooth' });
+}
+
+function getConfidenceLevel(score) {
+    if (score >= 0.8) {
+        return { label: 'High Confidence', class: 'high-confidence' };
+    } else if (score >= 0.5) {
+        return { label: 'Medium Confidence', class: 'medium-confidence' };
+    } else {
+        return { label: 'Low Confidence', class: 'low-confidence' };
+    }
+}
+</script>
+
+<style>
+/* Header Styles */
+.header {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.logo-img {
+    height: 2.5rem;
+    width: auto;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.3s;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.header-banner {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.header-banner h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+}
+
+.header-banner p {
+    font-size: 1.25rem;
+    opacity: 0.9;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Form Styles */
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.category-option {
+    position: relative;
+}
+
+.category-radio {
+    position: absolute;
+    opacity: 0;
+}
+
+.category-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    background: white;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.category-btn:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+}
+
+.category-btn.selected {
+    border-color: #4f46e5;
+    background: #f5f3ff;
+}
+
+.category-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.category-label {
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Button Styles */
+.analyze-btn {
+    width: 100%;
+    padding: 1rem;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.3s;
+}
+
+.analyze-btn:not(:disabled):hover {
+    background: #4338ca;
+}
+
+.analyze-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Alert Styles */
+.alert {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    animation: slideIn 0.3s ease forwards;
+    z-index: 1000;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.alert-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.alert.fade-out {
+    animation: slideOut 0.3s ease forwards;
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+</style>
+{% endblock %}
