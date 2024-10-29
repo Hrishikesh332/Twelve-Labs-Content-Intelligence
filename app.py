@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, jsonify, flash
-from werkzeug.utils import secure_filename
 import os
 from dotenv import load_dotenv
 from twelvelabs import TwelveLabs
@@ -12,7 +11,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
+
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
