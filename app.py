@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, flash
+from flask import Flask, render_template, request, jsonify, flask
 import os
 from dotenv import load_dotenv
 from twelvelabs import TwelveLabs
