@@ -231,9 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </span>
                         </div>
                         <p class="violation-description">${violation.description}</p>
-                        <div class="violation-confidence">
-                            Confidence: ${Math.round(violation.confidence * 100)}%
-                        </div>
+
                     </div>
                 </div>
             `).join('')}

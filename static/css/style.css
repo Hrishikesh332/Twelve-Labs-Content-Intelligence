@@ -22,12 +22,11 @@ body {
 
 /* Header */
 .header {
-    padding: 4rem 1rem;
+    padding: 2rem 1rem;
     text-align: center;
     background: white;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--primary); 
 }
-
 .header h1 {
     font-size: 2.5rem;
     font-weight: 700;
@@ -44,7 +43,7 @@ body {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem 1rem;
+    padding: 1rem 1rem;
 }
 
 /* Feature Cards */
@@ -91,8 +90,8 @@ body {
 /* Upload Section */
 .upload-section {
     text-align: center;
-    margin: 4rem 0;
-    padding: 2rem;
+    margin: 2rem 0;
+    padding: 1rem;
     background: var(--primary-light);
     border-radius: 1rem;
 }

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-# app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key') 
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key') 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 API_KEY = os.getenv('API_KEY')
