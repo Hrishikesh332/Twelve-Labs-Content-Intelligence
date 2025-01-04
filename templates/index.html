@@ -1,41 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- Header/Banner First -->
 <div class="header">
     <div class="header-content">
         <h1>Video Content Analysis</h1>
-        <p>Upload and analyze video content with advanced AI</p>
+        <p>AI-powered content moderation and policy violation detection</p>
     </div>
 </div>
 
+<!-- Upload Section Below Banner -->
 <div class="container">
+    <!-- Upload Section -->
+    <div class="upload-section">
+        <button id="uploadTrigger" class="upload-button">
+            <span class="button-icon">📤</span>
+            <span class="button-text">Upload Video for Analysis</span>
+        </button>
+        <p class="upload-hint">Supported formats: MP4, AVI, MOV (Max 2GB)</p>
+    </div>
+
+    <!-- Feature Cards -->
     <div class="features-grid">
-        <!-- Feature Cards -->
         <div class="feature-card">
             <div class="feature-icon">🎯</div>
-            <h3>Content Flagging</h3>
-            <p>Automatically detect and flag inappropriate content in videos with high accuracy</p>
+            <h3>Policy Violation Detection</h3>
+            <p>Automatically identify content that violates community guidelines</p>
         </div>
 
         <div class="feature-card">
             <div class="feature-icon">⚡</div>
             <h3>Real-time Analysis</h3>
-            <p>Get instant insights with our advanced AI-powered video analysis</p>
+            <p>Frame-by-frame video content analysis with AI precision</p>
         </div>
 
         <div class="feature-card">
-            <div class="feature-icon">🔒</div>
-            <h3>Content Safety</h3>
-            <p>Ensure your content meets community guidelines and safety standards</p>
+            <div class="feature-icon">📊</div>
+            <h3>Detailed Reports</h3>
+            <p>Comprehensive violation reports with timestamps</p>
         </div>
-    </div>
-
-    <!-- Upload Button -->
-    <div class="upload-section">
-        <button id="uploadTrigger" class="upload-button">
-            <span class="button-icon">📤</span>
-            <span class="button-text">Upload Video</span>
-        </button>
-        <p class="upload-hint">Supports MP4, AVI, MOV formats up to 2GB</p>
     </div>
 
     <!-- Upload Modal -->
@@ -44,17 +46,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Upload Video</h2>
-                <span class="step-count">2/2</span>
+                <button class="close-button" id="closeModal">×</button>
             </div>
 
             <div class="modal-body">
-                <div class="select-index">
-                    <label for="indexSelect">Select Index</label>
-                    <select id="indexSelect" class="select-input">
-                        <option value="new">New</option>
-                    </select>
-                </div>
-
                 <form id="uploadForm">
                     <div class="dropzone" id="dropZone">
                         <input type="file" id="fileInput" accept="video/*" hidden>
@@ -79,9 +74,6 @@
                                     <span>≤2GB</span>
                                 </div>
                             </div>
-                            <p class="support-text">
-                                Powered by <span class="highlight">Pegasus</span> AI Model
-                            </p>
                         </div>
                     </div>
 
@@ -90,7 +82,7 @@
                     <div class="modal-footer">
                         <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
                         <button type="submit" id="uploadBtn" class="btn btn-primary" disabled>
-                            <span class="btn-text">Upload</span>
+                            <span class="btn-text">Upload & Analyze</span>
                             <div class="spinner hidden"></div>
                         </button>
                     </div>
@@ -102,19 +94,41 @@
     <!-- Processing Overlay -->
     <div id="processingOverlay" class="processing-overlay hidden">
         <div class="processing-content">
-            <div class="scan-animation">
-                <div class="scan-line"></div>
+            <div class="processing-header">
+                <div id="videoThumbnail" class="video-thumbnail">
+                    <!-- Thumbnail will be inserted here -->
+                </div>
+                <div class="processing-info">
+                    <h3>Processing Video</h3>
+                    <div class="loader-container">
+                        <div class="analysis-loader">
+                            <div class="loader-bar"></div>
+                        </div>
+                        <p class="processing-status">Analyzing content and detecting violations...</p>
+                    </div>
+                </div>
             </div>
-            <h3>Processing Your Video</h3>
-            <p>Our AI is analyzing the content...</p>
         </div>
     </div>
 
     <!-- Results Section -->
     <div id="resultsSection" class="results-section hidden">
-        <h2>Analysis Results</h2>
-        <div id="videoPlayer" class="video-player"></div>
-        <div id="analysisResults" class="analysis-results"></div>
+        <div class="results-header">
+            <h2>Analysis Report</h2>
+            <div id="reportTimestamp" class="report-timestamp"></div>
+        </div>
+        
+        <div class="results-content">
+            <div class="video-section">
+                <div id="videoPlayer" class="video-player"></div>
+                <div id="videoInfo" class="video-info"></div>
+            </div>
+
+            <div class="analysis-section">
+                <div id="violationSummary" class="violation-summary"></div>
+                <div id="analysisResults" class="detailed-analysis"></div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

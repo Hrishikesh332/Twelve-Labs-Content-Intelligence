@@ -7,14 +7,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const cancelBtn = document.getElementById('cancelBtn');
+    const closeModal = document.getElementById('closeModal');
     const selectedFileDiv = document.getElementById('selectedFile');
     const processingOverlay = document.getElementById('processingOverlay');
     const resultsSection = document.getElementById('resultsSection');
 
     let currentFile = null;
 
+
     uploadTrigger?.addEventListener('click', () => {
         uploadModal.classList.remove('hidden');
+    });
+
+    closeModal?.addEventListener('click', () => {
+        uploadModal.classList.add('hidden');
+        resetForm();
     });
 
     cancelBtn?.addEventListener('click', () => {
@@ -57,11 +64,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const file = files[0];
         if (!file) return;
 
+        // Validate file type
         if (!file.type.startsWith('video/')) {
             showNotification('Please upload a video file', 'error');
             return;
         }
-
 
         const maxSize = 2 * 1024 * 1024 * 1024;
         if (file.size > maxSize) {
@@ -72,11 +79,13 @@ document.addEventListener('DOMContentLoaded', function() {
         currentFile = file;
         uploadBtn.disabled = false;
         
-
-        selectedFileDiv.textContent = file.name;
+        selectedFileDiv.innerHTML = `
+            <div class="file-info">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${formatFileSize(file.size)}</span>
+            </div>
+        `;
         selectedFileDiv.classList.remove('hidden');
-        
-        showNotification('File selected successfully', 'success');
     }
 
     uploadForm?.addEventListener('submit', async (e) => {
@@ -86,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             setUploadingState(true);
             
+            uploadModal.classList.add('hidden');
+            showProcessingOverlay();
+
             const formData = new FormData();
             formData.append('video', currentFile);
 
@@ -101,8 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const uploadResult = await uploadResponse.json();
 
             if (uploadResult.success) {
-                uploadModal.classList.add('hidden');
-                showProcessingOverlay();
                 await startAnalysis();
             } else {
                 throw new Error(uploadResult.error || 'Upload failed');
@@ -110,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             showNotification(error.message, 'error');
+            hideProcessingOverlay();
             setUploadingState(false);
         }
     });
@@ -148,9 +159,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayResults(results) {
         resultsSection.classList.remove('hidden');
 
+        const timestamp = new Date(results.timestamp).toLocaleString();
+        document.getElementById('reportTimestamp').textContent = `Generated: ${timestamp}`;
 
-        const videoPlayer = document.getElementById('videoPlayer');
         if (results.video_url) {
+            const videoPlayer = document.getElementById('videoPlayer');
             videoPlayer.innerHTML = `
                 <video controls>
                     <source src="${results.video_url}" type="application/x-mpegURL">
@@ -168,17 +181,132 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        const violationSummary = document.getElementById('violationSummary');
         const analysisResults = document.getElementById('analysisResults');
-        if (results.analysis) {
-            analysisResults.innerHTML = `
-                <div class="analysis-content">
-                    <h3>Content Analysis Results</h3>
-                    <div class="analysis-text">${results.analysis}</div>
+        const videoInfo = document.getElementById('videoInfo');
+        const analysis = results.analysis;
+        
+        videoInfo.innerHTML = `
+            <div class="video-metadata">
+                <div class="info-item">
+                    <span class="info-label">Duration:</span>
+                    <span class="info-value">${analysis.duration}s</span>
                 </div>
-            `;
-        }
+                <div class="info-item">
+                    <span class="info-label">Risk Level:</span>
+                    <span class="info-value risk-${analysis.risk_level}">${analysis.risk_level.toUpperCase()}</span>
+                </div>
+            </div>
+        `;
+        violationSummary.innerHTML = `
+            <h3>Content Analysis Summary</h3>
+            <p>${analysis.summary}</p>
+            <div class="violation-stats">
+                <div class="stat-item">
+                    <span class="stat-value">${analysis.violation_count}</span>
+                    <span class="stat-label">Violations Detected</span>
+                </div>
+                ${Object.entries(analysis.policy_categories)
+                    .map(([category, violated]) => `
+                        <div class="policy-item ${violated ? 'violated' : ''}">
+                            <span class="policy-icon">${violated ? '❌' : '✅'}</span>
+                            <span class="policy-name">${formatCategory(category)}</span>
+                        </div>
+                    `).join('')}
+            </div>
+        `;
+
+        analysisResults.innerHTML = `
+            <h3>Detailed Findings</h3>
+            ${analysis.violations.map(violation => `
+                <div class="violation-item">
+                    <div class="violation-time">
+                        ${formatTime(violation.timestamp)}
+                    </div>
+                    <div class="violation-content">
+                        <div class="violation-header">
+                            <span class="violation-type">${violation.type}</span>
+                            <span class="violation-severity severity-${violation.severity}">
+                                ${violation.severity.toUpperCase()}
+                            </span>
+                        </div>
+                        <p class="violation-description">${violation.description}</p>
+                        <div class="violation-confidence">
+                            Confidence: ${Math.round(violation.confidence * 100)}%
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+            
+            ${analysis.recommendations.length > 0 ? `
+                <div class="recommendations">
+                    <h4>Recommendations</h4>
+                    <ul>
+                        ${analysis.recommendations.map(rec => `
+                            <li>${rec}</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        `;
 
         resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function formatCategory(category) {
+        return category
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
+    function setUploadingState(isUploading) {
+        const btnText = uploadBtn.querySelector('.btn-text');
+        const spinner = uploadBtn.querySelector('.spinner');
+        
+        if (isUploading) {
+            uploadBtn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.classList.remove('hidden');
+        } else {
+            uploadBtn.disabled = false;
+            btnText.style.display = 'inline';
+            spinner.classList.add('hidden');
+        }
+    }
+
+    function showProcessingOverlay() {
+        processingOverlay.classList.remove('hidden');
+        if (currentFile) {
+            createVideoThumbnail(currentFile);
+        }
+    }
+
+    function hideProcessingOverlay() {
+        processingOverlay.classList.add('hidden');
+    }
+
+    function createVideoThumbnail(file) {
+        const video = document.createElement('video');
+        const thumbnailContainer = document.getElementById('videoThumbnail');
+        
+        video.src = URL.createObjectURL(file);
+        video.addEventListener('loadeddata', () => {
+            video.currentTime = 1; // 1 second to avoid black frame
+        });
+
+        video.addEventListener('seeked', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            thumbnailContainer.innerHTML = `
+                <img src="${canvas.toDataURL()}" alt="Video thumbnail">
+            `;
+            
+            URL.revokeObjectURL(video.src);
+        });
     }
 
     function showNotification(message, type) {
@@ -198,83 +326,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 
-    function setUploadingState(isUploading) {
-        const btnText = uploadBtn.querySelector('.btn-text');
-        const spinner = uploadBtn.querySelector('.spinner');
-        
-        if (isUploading) {
-            uploadBtn.disabled = true;
-            btnText.style.display = 'none';
-            spinner.classList.remove('hidden');
-            cancelBtn.disabled = true;
-        } else {
-            uploadBtn.disabled = true;
-            btnText.style.display = 'inline';
-            spinner.classList.add('hidden');
-            cancelBtn.disabled = false;
-        }
-    }
-
-    function showProcessingOverlay() {
-        processingOverlay.classList.remove('hidden');
-    }
-
-    function hideProcessingOverlay() {
-        processingOverlay.classList.add('hidden');
-    }
-
     function resetForm() {
         if (uploadForm) uploadForm.reset();
         currentFile = null;
         if (uploadBtn) uploadBtn.disabled = true;
         if (selectedFileDiv) {
-            selectedFileDiv.textContent = '';
+            selectedFileDiv.innerHTML = '';
             selectedFileDiv.classList.add('hidden');
         }
         if (dropZone) dropZone.classList.remove('dragover');
     }
 
-    window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => e.preventDefault());
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
 });
-
-
-const style = document.createElement('style');
-style.textContent = `
-    .notification {
-        position: fixed;
-        top: 1rem;
-        right: 1rem;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        background: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        z-index: 1100;
-        animation: slideIn 0.3s ease;
-    }
-
-    .notification-success {
-        border-left: 4px solid #5AC903;
-    }
-
-    .notification-error {
-        border-left: 4px solid #dc2626;
-    }
-
-    .notification.fade-out {
-        animation: slideOut 0.3s ease;
-    }
-
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
