@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, jsonify, flash
-from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, jsonify, session
 import os
 from dotenv import load_dotenv
 from twelvelabs import TwelveLabs
 import requests
 import logging
+import uuid
+from werkzeug.utils import secure_filename
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -12,292 +13,143 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key') 
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  
 
-API_KEY = os.getenv('API_KEY')  
-INDEX_ID = os.getenv('INDEX_ID') 
+API_KEY = os.getenv('API_KEY')
+BASE_URL = "https://api.twelvelabs.io/v1.3"
 
-if not API_KEY or not INDEX_ID:
-    logger.error("Missing required environment variables. Please check .env file.")
-    raise ValueError("Missing required environment variables: TWELVELABS_API_KEY or TWELVELABS_INDEX_ID")
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
 
-try:
-    client = TwelveLabs(api_key=API_KEY)
-except Exception as e:
-    logger.error(f"Failed to initialize TwelveLabs client: {e}")
-    raise
 
-def get_initial_classes():
-    return [
-    {
-        "name": "Violence",
-        "prompts": [
-            "physical altercation",
-            "weapon usage",
-            "graphic injury",
-            "cruel acts towards animals",
-            "depiction of torture"
-        ]
-    },
-    {
-        "name": "HateSpeech",
-        "prompts": [
-            "racial slurs",
-            "discriminatory language",
-            "promotion of extremist ideologies",
-            "religious intolerance",
-            "gender-based harassment"
-        ]
-    },
-    {
-        "name": "ChildExploitation",
-        "prompts": [
-            "content involving minors in inappropriate situations",
-            "child labor",
-            "predatory behavior towards children",
-            "sharing of private information about minors",
-            "content encouraging harmful behavior in children"
-        ]
-    },
-    {
-        "name": "Misinformation",
-        "prompts": [
-            "false health claims",
-            "election misinformation",
-            "conspiracy theories",
-            "pseudoscientific content",
-            "deliberately misleading news"
-        ]
-    },
-    {
-        "name": "CopyrightViolation",
-        "prompts": [
-            "unauthorized use of copyrighted material",
-            "pirated content",
-            "counterfeit product promotion",
-            "plagiarism",
-            "misuse of trademarks"
-        ]
-    },
-    {
-        "name": "GraphicContent",
-        "prompts": [
-            "excessive gore",
-            "graphic medical procedures",
-            "animal cruelty",
-            "disturbing accident footage",
-            "extreme body modifications"
-        ]
-    },
-    {
-        "name": "Harassment",
-        "prompts": [
-            "cyberbullying",
-            "doxxing",
-            "threats of violence",
-            "stalking behavior",
-            "coordinated harassment campaigns"
-        ]
-    },
-    {
-        "name": "SexualContent",
-        "prompts": [
-            "pornographic material",
-            "explicit sexual descriptions",
-            "non-consensual intimate imagery",
-            "solicitation for sexual services",
-            "sexualization of minors"
-        ]
-    },
-    {
-        "name": "Spam",
-        "prompts": [
-            "unsolicited commercial content",
-            "excessive self-promotion",
-            "bot-generated messages",
-            "phishing attempts",
-            "clickbait content"
-        ]
-    },
-    {
-        "name": "PrivacyViolation",
-        "prompts": [
-            "sharing personal information without consent",
-            "unauthorized biometric data collection",
-            "violation of medical privacy",
-            "exposure of confidential business information",
-            "sharing of private messages or media"
-        ]
-    },
-    {
-        "name": "SelfHarm",
-        "prompts": [
-            "promotion of eating disorders",
-            "suicide ideation",
-            "self-injury content",
-            "dangerous challenges or trends",
-            "glorification of mental illness"
-        ]
-    },
-        {
-        "name": "SelfHarm",
-        "prompts": [
-            "promotion of eating disorders",
-            "suicide ideation",
-            "self-injury content",
-            "dangerous challenges or trends",
-            "glorification of mental illness"
-        ]
-    },
-    {
-        "name": "InappropriateVideoContent",
-        "prompts": [
-            "mildly suggestive scenes",
-            "non-extreme pranks or stunts",
-            "mild profanity or crude humor",
-            "depiction of unsafe behavior",
-            "controversial but non-explicit political content"
-        ]
-    },
-    {
-        "name": "VideoTechnicalIssues",
-        "prompts": [
-            "poor video quality or heavy compression artifacts",
-            "severe audio-video desynchronization",
-            "frequent buffering or playback issues",
-            "incorrect aspect ratio or cropping",
-            "unintended background noise or disruptions"
-        ]
-    }
-]
+client = TwelveLabs(api_key=API_KEY)
 
-CATEGORY_EMOJIS = {
-    "Violence": "⚔️",
-    "HateSpeech": "🚫",
-    "GraphicContent": "⚠️",
-    "Harassment": "🚷",
-    "PrivacyViolation": "🔒",
-    "SexualContent": "🔞",
-    "Misinformation": "❌",
-    "SelfHarm": "⛔",
-    "ChildExploitation": "👶❌",  
-    "CopyrightViolation": "©️",    
-    "Spam": "🔧",                  
-    "InappropriateVideoContent": "📹⚠️",  
-    "VideoTechnicalIssues": "🎥⚡"   
-}
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'wmv', 'mkv'}
 
-def classify_videos(selected_classes):
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def create_index():
     try:
-        logger.debug(f"Attempting to classify videos with classes: {selected_classes}")
+        index_name = f"ContentAnalysis_{uuid.uuid4().hex[:8]}"
+        engines = [
+            {
+                "name": "pegasus1.1",
+                "options": ["visual", "conversation"]
+            }
+        ]
         
-        # Format classes for the API
-        formatted_classes = []
-        for class_info in selected_classes:
-            name = class_info.get('name')
-            if name:
-                formatted_class = {
-                    "name": name,
-                    "prompts": next((c['prompts'] for c in get_initial_classes() if c['name'] == name), [])
-                }
-                formatted_classes.append(formatted_class)
-
-        logger.debug(f"Formatted classes for API: {formatted_classes}")
-
-        response = client.classify.index(
-            index_id=INDEX_ID,
-            options=["visual"],
-            classes=formatted_classes,
-            include_clips=True
+        index = client.index.create(
+            name=index_name,
+            engines=engines  
         )
         
-        logger.debug(f"Classification response received: {response}")
-        return response
-        
+        logger.info(f"Created new index with ID: {index.id}")
+        return index.id
     except Exception as e:
-        logger.error(f"Classification failed: {str(e)}")
-        raise Exception(f"Classification failed: {str(e)}")
-
-def get_video_urls(video_ids):
-    base_url = f"https://api.twelvelabs.io/v1.2/indexes/{INDEX_ID}/videos/{{}}"
-    headers = {"x-api-key": API_KEY, "Content-Type": "application/json"}
-    video_urls = {}
-    
-    for video_id in video_ids:
-        try:
-            logger.debug(f"Fetching URL for video ID: {video_id}")
-            response = requests.get(base_url.format(video_id), headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            if 'hls' in data and 'video_url' in data['hls']:
-                video_urls[video_id] = data['hls']['video_url']
-                logger.debug(f"Successfully retrieved URL for video ID: {video_id}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to fetch video URL for ID {video_id}: {str(e)}")
-            continue
-    
-    return video_urls
+        logger.error(f"Failed to create index: {str(e)}")
+        raise
 
 @app.route('/')
 def index():
-    classes = get_initial_classes()
-    return render_template('index.html', classes=classes, category_emojis=CATEGORY_EMOJIS)
+    return render_template('index.html')
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
+@app.route('/upload', methods=['POST'])
+def upload_video():
+    filepath = None  
     try:
-        logger.debug("Received analyze request")
-        data = request.get_json()
-        if not data:
-            logger.error("No JSON data received in request")
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        if 'video' not in request.files:
+            return jsonify({'success': False, 'error': 'No video file provided'}), 400
+        
+        file = request.files['video']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No selected file'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'error': 'Invalid file type'}), 400
 
-        selected_classes = data.get('classes', [])
-        logger.debug(f"Selected classes: {selected_classes}")
+        index_id = create_index()
+        session['index_id'] = index_id
+
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        task = client.task.create(
+            index_id=index_id,
+            file=filepath
+        )
         
-        if not selected_classes:
-            logger.error("No classes selected")
-            return jsonify({'success': False, 'error': 'No classes selected'}), 400
+        def on_task_update(task):
+            logger.info(f"Indexing status: {task.status}")
         
-        results = classify_videos(selected_classes)
+        task.wait_for_done(sleep_interval=5, callback=on_task_update)
         
-        if not results or not hasattr(results, 'data') or not results.data:
-            logger.error("No results returned from classification")
-            return jsonify({'success': False, 'error': 'No videos found in the index'}), 404
+        if task.status != "ready":
+            raise Exception(f"Indexing failed with status {task.status}")
+
+        session['video_id'] = task.video_id
         
-        video_ids = [data.video_id for data in results.data]
-        logger.debug(f"Fetching URLs for video IDs: {video_ids}")
-        video_urls = get_video_urls(video_ids)
-        
-        analysis_results = []
-        for video_data in results.data:
-            result = {
-                'video_id': video_data.video_id,
-                'video_url': video_urls.get(video_data.video_id),
-                'classes': [
-                    {
-                        'name': c.name,
-                        'score': c.score,
-                        'duration_ratio': getattr(c, 'duration_ratio', None)
-                    } for c in video_data.classes
-                ]
-            }
-            analysis_results.append(result)
-        
-        logger.debug(f"Sending response with {len(analysis_results)} results")
         return jsonify({
-            'success': True, 
-            'results': analysis_results
+            'success': True,
+            'message': 'Video uploaded and indexed successfully',
+            'video_id': task.video_id
         })
         
     except Exception as e:
-        logger.error(f"Error in analyze route: {str(e)}", exc_info=True)
+        logger.error(f"Upload failed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+    finally:
+  
+        if filepath and os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                logger.error(f"Failed to remove temporary file: {str(e)}")
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    if 'video_id' not in session:
+        return jsonify({'success': False, 'error': 'No video indexed'}), 400
+    
+    video_id = session['video_id']
+    index_id = session['index_id']
+    
+    try:
+
+        headers = {
+            "x-api-key": API_KEY,
+            "Content-Type": "application/json"
+        }
+        url_response = requests.get(
+            f"{BASE_URL}/indexes/{index_id}/videos/{video_id}",
+            headers=headers
+        )
+        url_response.raise_for_status()  
+        video_url = url_response.json().get('hls', {}).get('video_url')
+        
+        if not video_url:
+            raise Exception("Failed to get video URL")
+
+        analysis_response = client.generate.text(
+            video_id=video_id,
+            prompt="Provide a detailed analysis of this video's content, identifying any concerning or inappropriate material."
+        )
+        
+        analysis_text = str(analysis_response.data).strip()
+        
         return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            'success': True,
+            'video_url': video_url,
+            'analysis': analysis_text
+        })
+        
+    except Exception as e:
+        logger.error(f"Analysis failed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
