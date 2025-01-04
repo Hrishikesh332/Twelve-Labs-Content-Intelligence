@@ -1,4 +1,5 @@
-streamlit
-twelvelabs
-requests
-python-dotenv
+flask==3.0.0
+python-dotenv==1.0.0
+twelvelabs==0.2.10
+requests==2.31.0
+gunicorn
