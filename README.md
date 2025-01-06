@@ -45,8 +45,6 @@ Using Twelve Labs' state-of-the-art models, the application addresses the comple
 
 📄 **Detailed Reporting**: Generate in depth reports for compliance.
 
-💻 **Multi Context Compatibility**: Customizable moderation parameters for diverse industries and platforms.
-
 ## Tech Stack
 
 **Frontend** - HTML, CSS, JavaScript  
