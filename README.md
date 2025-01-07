@@ -48,7 +48,7 @@ Using Twelve Labs' state-of-the-art models, the application addresses the comple
 ## Tech Stack
 
 **Frontend** - HTML, CSS, JavaScript  
-**Backend** - Flask, Twelve Labs AI APIs  
+**Backend** - Flask, Twelve Labs SDK
 **AI Technologies** - Twelve Labs (Pegasus 1.1 Engine)
 
 ## Instructions on Running Project Locally:
