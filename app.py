@@ -36,17 +36,17 @@ def create_index():
     """Create a new index with appropriate engines"""
     try:
         index_name = f"ContentAnalysis_{uuid.uuid4().hex[:8]}"
-        engines = [
+        models = [
             {
-                "name": "pegasus1.1",
-                "options": ["visual", "conversation"]
+                "name": "pegasus1.2",
+                "options": ["visual", "audio"]
             }
         ]
         
         logger.debug(f"Creating new index with name: {index_name}")
         index = client.index.create(
             name=index_name,
-            engines=engines
+            models=models
         )
         
         logger.info(f"Created new index with ID: {index.id}")
