@@ -9,7 +9,7 @@
     <a href="https://github.com/Hrishikesh332/Twelve-Labs-Content-Intelligence"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="<Need to be Added>">View Demo</a>
+    <a href="https://twelve-labs-content-intelligence.onrender.com/">View Demo</a>
     ·
     <a href="https://github.com/Hrishikesh332/Twelve-Labs-Content-Intelligence/issues">Report Bug</a>
     ·
@@ -35,23 +35,21 @@
 
 Content Intelligence - Video Content Moderation Application is here with the ability to analyze and moderate video content, this application is designed for platforms and creators who prioritize community standards, safety, and inclusivity.
 
-Imagine having a vigilant AI assistant, analyzing content frame by frame for inappropriate material, copyright violations, and harmful language. By automating content moderation, the tool doesn’t just keep your platform compliant; it also frees up your time so you can focus on creating and engaging without worry! 🌍
+Imagine having a vigilant AI, analyzing content frame by frame for inappropriate material, copyright violations, and harmful language. By automating content moderation, the tool doesn’t just keep your platform compliant; it also frees up your time so you can focus on creating and engaging without worry! 🌍
 
 Using Twelve Labs' state-of-the-art models, the application addresses the complex task of video moderation for various contexts, making it an essential tool for media platforms, educational institutes, and businesses seeking compliance and security in their video content.
 
 ## Features
 
-🚫 **Automated Content Flagging**: Detect and flag inappropriate content in real time.
+🚫 **Automated Content Flagging**: Detect and flag inappropriate content.
 
 📄 **Detailed Reporting**: Generate in depth reports for compliance.
-
-💻 **Multi Context Compatibility**: Customizable moderation parameters for diverse industries and platforms.
 
 ## Tech Stack
 
 **Frontend** - HTML, CSS, JavaScript  
-**Backend** - Flask, Twelve Labs AI APIs  
-**AI Technologies** - Twelve Labs (Marengo 2.6, Pegasus 1.1)
+**Backend** - Flask, Twelve Labs SDK
+**AI Technologies** - Twelve Labs (Pegasus 1.1 Engine)
 
 ## Instructions on Running Project Locally:
 
@@ -73,7 +71,6 @@ Prepare the .env file as per the instructions. The .env file is provided below
 
 ```
 API_KEY = "<Your API Key>"
-INDEX_ID="<Your INDEX ID>"
 ```
 
 To Run the Server Locally
