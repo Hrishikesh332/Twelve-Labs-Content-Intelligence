@@ -37,7 +37,7 @@ Content Intelligence - Video Content Moderation Application is here with the abi
 
 Imagine having a vigilant AI, analyzing content frame by frame for inappropriate material, copyright violations, and harmful language. By automating content moderation, the tool doesn’t just keep your platform compliant; it also frees up your time so you can focus on creating and engaging without worry! 🌍
 
-Using Twelve Labs' state-of-the-art models, the application addresses the complex task of video moderation for various contexts, making it an essential tool for media platforms, educational institutes, and businesses seeking compliance and security in their video content.
+Using Twelve Labs pegasus 1.2 model, the application addresses the complex task of video moderation for various contexts, making it an essential tool for media platforms, educational institutes, and businesses seeking compliance and security in their video content.
 
 ## Features
 
